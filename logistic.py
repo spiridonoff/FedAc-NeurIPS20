@@ -184,6 +184,41 @@ class LogiBinaryLibSVM():
 
             w_pool -= eta * self.sample_grad_pool(w_pool, M, local_batch)
         return seq
+    
+    def fedavg_lin(self, eta, M, K, T, local_batch, record_intvl=512, print_intvl=8192, SEED=0):
+        """
+        Simulate Federated Averaging (FedAvg, a.k.a. Local-SGD, or Parallel SGD, etc.) 
+        with linearly growing intervals.
+
+        Arguments:
+            eta:    learning rate
+            M:      number of workers
+            K:      synchronization interval, (i.e., local steps)
+            T:      total parallel runtime
+            record_intvl:   compute the population loss every record_intvl steps.
+
+        Return:
+            A pandas.Series object of population loss evaluated.
+        """
+        np.random.seed(SEED)
+        common_init_w = np.random.randn(*self.weight_shape)
+        w_pool = np.repeat(common_init_w[np.newaxis, :], M, axis=0)
+        
+        # calculate communication times
+        R = int(np.ceil(T/K))
+        a = 2*T/(R*(R+1))
+        comms = [int(a*r*(r+1)/2) for r in range(R+1)]
+
+        seq = pd.Series(name='loss')
+        for iter_cnt in range(T+1):
+            if iter_cnt in comms:
+                w_pool = self.broadcast_avg(w_pool)
+
+                if iter_cnt % record_intvl == 0:
+                    seq.at[iter_cnt] = self.population_loss(w_pool[0, :])
+
+            w_pool -= eta * self.sample_grad_pool(w_pool, M, local_batch)
+        return seq
 
     def fedac(self, eta, gamma, alpha, beta, M, K, T, local_batch, record_intvl=512, print_intvl=8192, SEED=0):
         """
@@ -235,6 +270,7 @@ class LogiBinaryLibSVM():
                     2:  FedAc-II
                     3:  MB-SGD
                     4:  MB-AC-SGD
+                    5: FedAvg_lin (paper under review)
             eta:    learning rate
             M:      number of workers
             K:      synchronization interval
@@ -267,6 +303,14 @@ class LogiBinaryLibSVM():
 
         if args['alg'] == 0:      # FedAvg
             seq = self.fedavg(eta=args['eta'], 
+                                 M=args['M'],
+                                 K=args['K'],
+                                 T=args['T'],
+                                 local_batch=args['local_batch'],
+                                 record_intvl=args['record_intvl'],
+                                 SEED=args['seed'])
+        elif args['alg'] == 5:      # Fedavg-lin
+            seq = self.fedavg_lin(eta=args['eta'], 
                                  M=args['M'],
                                  K=args['K'],
                                  T=args['T'],
