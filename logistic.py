@@ -208,7 +208,8 @@ class LogiBinaryLibSVM():
         R = int(np.ceil(T/K))
         a = 2*T/(R*(R+1))
         comms = [int(a*r*(r+1)/2) for r in range(R+1)]
-
+        C = 3/self.lambd
+        
         seq = pd.Series(name='loss')
         for iter_cnt in range(T+1):
             if iter_cnt in comms:
@@ -216,8 +217,9 @@ class LogiBinaryLibSVM():
 
                 if iter_cnt % record_intvl == 0:
                     seq.at[iter_cnt] = self.population_loss(w_pool[0, :])
-
-            w_pool -= eta * self.sample_grad_pool(w_pool, M, local_batch)
+        
+            step_size = C/(iter_cnt + eta)
+            w_pool -= step_size * self.sample_grad_pool(w_pool, M, local_batch)
         return seq
 
     def fedac(self, eta, gamma, alpha, beta, M, K, T, local_batch, record_intvl=512, print_intvl=8192, SEED=0):
