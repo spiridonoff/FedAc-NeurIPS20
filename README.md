@@ -17,8 +17,7 @@ Scripts:
 
 - `logistic.py`: main functions
 - `analysis_utils.py`: auxiliary functions for analysis
-
-To produce the new results with communication strategy which includes "linearly growing communication intervals", among others, use the jupyter notebook "test.ipynb".
+- `test.ipynb`: Notebook to produce the new communication strategy with "linearly growing communication intervals", among others.
 
 Here we used the same setting as Fig. 1 & 3 of the paper, using $l_2$ regularization factor of $Lambda = 1.0$.
 
